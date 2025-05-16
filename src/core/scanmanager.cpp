@@ -60,16 +60,18 @@ void ScanManager::scanDirectory(const QString &path) {
 void ScanManager::startScan() {
     Logger::info("Scan started");
     if (m_scanning) return;
+
     m_scanning = true;
     m_progress = 0;
     m_scannedFiles = 0;
     m_scannedDirs = 0;
     m_scanResult.clear();
+
     emit progressChanged();
     emit scannedFilesChanged();
     emit scannedDirsChanged();
 
-    // 异步扫描，防止阻塞主线程
+    // TODO(hualet): make it multi-thread
     QTimer::singleShot(0, this, [this]() {
         int totalDirs = kScanPaths.size();
         int currentDir = 0;
