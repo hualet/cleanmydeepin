@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QTranslator>
+#include <QCoreApplication>
 
 // 翻译管理器，负责多语言切换
 class Translator : public QObject {

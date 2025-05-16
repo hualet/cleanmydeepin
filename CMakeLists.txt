@@ -17,8 +17,21 @@ file(GLOB_RECURSE HEADERS
     src/*.h
 )
 
+# 创建可执行文件
+add_executable(${PROJECT_NAME}
+    ${SOURCES}
+    ${HEADERS}
+)
+
+# 设置输出文件名，避免与目录名冲突
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    OUTPUT_NAME "cleanmydeepin"
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE src src/core src/log)
+
 # QML 资源
-qt_add_qml_module(CleanMyDeepin
+qt_add_qml_module(${PROJECT_NAME}
     URI CleanMyDeepin
     QML_FILES
         qml/MainWindow.qml
@@ -31,19 +44,12 @@ qt_add_qml_module(CleanMyDeepin
         # 可添加资源文件
 )
 
-add_executable(${PROJECT_NAME}
-    ${SOURCES}
-    ${HEADERS}
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE src src/core src/log)
-
-target_link_libraries(${PROJECT_NAME}
+# 统一使用关键字签名方式
+target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
-    Qt6::LinguistTools
 )
 
 # 安装规则

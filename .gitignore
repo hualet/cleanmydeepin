@@ -54,3 +54,6 @@ compile_commands.json
 *_qmlcache.qrc
 # SpecStory explanation file
 .specstory/.what-is-this.md
+
+
+build/
