@@ -83,6 +83,14 @@ cleanmydeepin/
 - QML 进度条、状态文本实时更新，支持"中断"按钮
 - 扫描完成后，ScanManager 返回结果，QML 跳转到清理页并展示树状文件列表
 
+扫描的位置包括：
+- /tmp
+- /var/tmp
+- /var/log
+- ~/.cache
+- ~/.local/share/Trash
+- ~/.thumbnails
+
 ### 2. 清理流程
 - 用户在清理页勾选/全选垃圾项
 - 点击"清理"按钮，弹出二次确认弹窗

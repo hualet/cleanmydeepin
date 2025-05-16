@@ -1,5 +1,7 @@
 #pragma once
 #include <QObject>
+#include <QString>
+#include <QVector>
 
 // 扫描管理器，负责垃圾文件扫描
 class ScanManager : public QObject {
@@ -25,8 +27,16 @@ signals:
     void scannedFilesChanged();                    // 文件数属性变更信号
     void scannedDirsChanged();                     // 目录数属性变更信号
 private:
+    struct ScanItem {
+        QString path;
+        bool isDir;
+        qint64 size;
+    };
     qreal m_progress;
     int m_scannedFiles;
     int m_scannedDirs;
     bool m_scanning;
+    QVector<ScanItem> m_scanResult;
+    void scanDirectory(const QString &path);
+    static const QStringList kScanPaths;
 };
