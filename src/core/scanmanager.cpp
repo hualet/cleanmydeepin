@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QString>
 #include <QObject>
+#include <QThread>
 
 // 构造函数
 ScanManager::ScanManager(QObject *parent)
@@ -71,33 +72,58 @@ void ScanManager::startScan() {
     emit scannedFilesChanged();
     emit scannedDirsChanged();
 
-    // TODO(hualet): make it multi-thread
-    QTimer::singleShot(0, this, [this]() {
+    // 创建工作线程
+    QThread *workerThread = new QThread();
+    QObject *worker = new QObject();
+    worker->moveToThread(workerThread);
+
+    // 连接工作线程完成后的清理
+    connect(workerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
+
+    // 在工作线程中执行扫描
+    connect(workerThread, &QThread::started, worker, [this, worker, workerThread]() {
         int totalDirs = kScanPaths.size();
         int currentDir = 0;
+
         for (const QString &path : kScanPaths) {
             if (!m_scanning) break;
             scanDirectory(path);
             currentDir++;
-            m_progress = (qreal)currentDir / totalDirs;
+
+            // 使用 QMetaObject::invokeMethod 在主线程中更新进度
+            QMetaObject::invokeMethod(this, [this, currentDir, totalDirs]() {
+                m_progress = (qreal)currentDir / totalDirs;
+                emit progressChanged();
+                emit scanProgress(static_cast<int>(m_progress * 100), m_scannedFiles);
+            }, Qt::QueuedConnection);
+        }
+
+        // 扫描完成,在主线程中更新状态和发送结果
+        QMetaObject::invokeMethod(this, [this]() {
+            m_progress = 1.0;
             emit progressChanged();
-            emit scanProgress(static_cast<int>(m_progress * 100), m_scannedFiles);
-        }
-        m_progress = 1.0;
-        emit progressChanged();
-        emit scanProgress(100, m_scannedFiles);
-        m_scanning = false;
-        QVariantList resultList;
-        for (const auto &item : m_scanResult) {
-            QVariantMap map;
-            map["path"] = item.path;
-            map["isDir"] = item.isDir;
-            map["size"] = item.size;
-            resultList.append(map);
-        }
-        emit scanFinished(resultList);
-        Logger::info("Scan finished");
+            emit scanProgress(100, m_scannedFiles);
+            m_scanning = false;
+
+            QVariantList resultList;
+            for (const auto &item : m_scanResult) {
+                QVariantMap map;
+                map["path"] = item.path;
+                map["isDir"] = item.isDir;
+                map["size"] = item.size;
+                resultList.append(map);
+            }
+            emit scanFinished(resultList);
+            Logger::info("Scan finished");
+        }, Qt::QueuedConnection);
+
+        // 工作完成后退出线程
+        workerThread->quit();
     });
+
+    // 启动工作线程
+    workerThread->start();
 }
 
 // 停止扫描
