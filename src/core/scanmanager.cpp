@@ -115,6 +115,7 @@ void ScanManager::startScan() {
                 resultList.append(map);
             }
             emit scanFinished(resultList);
+            emit scanResultChanged();
             Logger::info("Scan finished");
         }, Qt::QueuedConnection);
 
@@ -130,6 +131,19 @@ void ScanManager::startScan() {
 void ScanManager::stopScan() {
     Logger::info("Scan interrupted by user");
     m_scanning = false;
+}
+
+QVariant ScanManager::scanResult() const {
+    // 返回 QVariantList，便于 QML 访问
+    QVariantList resultList;
+    for (const auto &item : m_scanResult) {
+        QVariantMap map;
+        map["path"] = item.path;
+        map["isDir"] = item.isDir;
+        map["size"] = item.size;
+        resultList.append(map);
+    }
+    return resultList;
 }
 
 // 私有成员变量

@@ -2,6 +2,7 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
+#include <QVariant>
 
 // 扫描管理器，负责垃圾文件扫描
 class ScanManager : public QObject {
@@ -9,6 +10,7 @@ class ScanManager : public QObject {
     Q_PROPERTY(qreal progress READ progress NOTIFY progressChanged)
     Q_PROPERTY(int scannedFiles READ scannedFiles NOTIFY scannedFilesChanged)
     Q_PROPERTY(int scannedDirs READ scannedDirs NOTIFY scannedDirsChanged)
+    Q_PROPERTY(QVariant scanResult READ scanResult NOTIFY scanResultChanged)
 public:
     explicit ScanManager(QObject *parent = nullptr);
 
@@ -18,6 +20,7 @@ public:
     qreal progress() const;
     int scannedFiles() const;
     int scannedDirs() const;
+    QVariant scanResult() const;
 
 signals:
     void scanProgress(int percent, int fileCount); // 扫描进度信号
@@ -26,6 +29,7 @@ signals:
     void progressChanged();                        // 进度属性变更信号
     void scannedFilesChanged();                    // 文件数属性变更信号
     void scannedDirsChanged();                     // 目录数属性变更信号
+    void scanResultChanged();                        // 扫描结果属性变更信号
 private:
     struct ScanItem {
         QString path;

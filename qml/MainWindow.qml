@@ -42,6 +42,26 @@ ApplicationWindow {
         }
     }
 
+    Component {
+        id: cleanPage
+
+        CleanPage {
+            id: cleanPageInstance
+
+            Component.onCompleted: {
+                treeData = buildTree(ScanManager.scanResult)
+                console.log("treeData:", treeData)
+            }
+        }
+    }
+
+    Connections {
+        target: ScanManager
+        function onScanFinished() {
+            pageStack.push(cleanPage)
+        }
+    }
+
     StackView {
         id: pageStack
         initialItem: homePage
