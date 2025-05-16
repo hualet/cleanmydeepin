@@ -3,25 +3,48 @@ import QtQuick.Controls 2.15
 
 ApplicationWindow {
     id: mainWindow
-    width: 1200
-    height: 800
+    width: 400
+    height: 600
     visible: true
     title: qsTr("CleanMyDeepin")
+
+    // 限制窗口大小
+    minimumWidth: width
+    maximumWidth: width
+    minimumHeight: height
+    maximumHeight: height
 
     // 高分屏缩放支持
     property real scaleFactor: Screen.pixelDensity / 2.0
 
-    // 左侧标签栏
-    Drawer {
-        id: navDrawer
-        width: 200 * mainWindow.scaleFactor
-        // TODO: 添加标签按钮，tooltip 说明，国际化
+    Component {
+        id: homePage
+        Item {
+
+            Button {
+                text: qsTr("Scan")
+                anchors.centerIn: parent
+                onClicked: {
+                    ScanManager.startScan()
+                    pageStack.push(scanPage)
+                }
+            }
+        }
     }
 
-    // 右侧页面内容
+    Component {
+        id: scanPage
+
+        ScanPage {
+            progress: ScanManager.progress
+            scannedFiles: ScanManager.scannedFiles
+            scannedDirs: ScanManager.scannedDirs
+        }
+    }
+
     StackView {
         id: pageStack
+        initialItem: homePage
         anchors.fill: parent
-        // TODO: 页面切换逻辑
     }
 }
