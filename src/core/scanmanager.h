@@ -3,6 +3,7 @@
 #include <QString>
 #include <QVector>
 #include <QVariant>
+#include <QMap>
 
 // 扫描管理器，负责垃圾文件扫描
 class ScanManager : public QObject {
@@ -11,16 +12,19 @@ class ScanManager : public QObject {
     Q_PROPERTY(int scannedFiles READ scannedFiles NOTIFY scannedFilesChanged)
     Q_PROPERTY(int scannedDirs READ scannedDirs NOTIFY scannedDirsChanged)
     Q_PROPERTY(QVariant scanResult READ scanResult NOTIFY scanResultChanged)
+    Q_PROPERTY(QVariant treeResult READ treeResult NOTIFY treeResultChanged)
 public:
     explicit ScanManager(QObject *parent = nullptr);
 
     Q_INVOKABLE void startScan();
     Q_INVOKABLE void stopScan();
+    Q_INVOKABLE QVariant getChildren(const QString &path);
 
     qreal progress() const;
     int scannedFiles() const;
     int scannedDirs() const;
     QVariant scanResult() const;
+    QVariant treeResult() const;
 
 signals:
     void scanProgress(int percent, int fileCount); // 扫描进度信号
@@ -29,7 +33,8 @@ signals:
     void progressChanged();                        // 进度属性变更信号
     void scannedFilesChanged();                    // 文件数属性变更信号
     void scannedDirsChanged();                     // 目录数属性变更信号
-    void scanResultChanged();                        // 扫描结果属性变更信号
+    void scanResultChanged();                      // 扫描结果属性变更信号
+    void treeResultChanged();                      // 树状结果属性变更信号
 private:
     struct ScanItem {
         QString path;
@@ -41,6 +46,12 @@ private:
     int m_scannedDirs;
     bool m_scanning;
     QVector<ScanItem> m_scanResult;
+    QVariantList m_treeResult;
+    QMap<QString, QVariantList> m_pathChildrenMap; // 存储每个路径的直接子节点
+
     void scanDirectory(const QString &path);
+    void buildFirstLevelTree();
+    void addPathToChildrenMap(const QString &path, bool isDir, qint64 size);
+    void initTestData();  // 初始化测试数据
     static const QStringList kScanPaths;
 };

@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 
 ApplicationWindow {
     id: mainWindow
@@ -25,6 +26,7 @@ ApplicationWindow {
                 text: qsTr("Scan")
                 anchors.centerIn: parent
                 onClicked: {
+                    console.log("Starting scan")
                     ScanManager.startScan()
                     pageStack.push(scanPage)
                 }
@@ -47,17 +49,13 @@ ApplicationWindow {
 
         CleanPage {
             id: cleanPageInstance
-
-            Component.onCompleted: {
-                treeData = buildTree(ScanManager.scanResult)
-                console.log("treeData:", treeData)
-            }
         }
     }
 
     Connections {
         target: ScanManager
         function onScanFinished() {
+            console.log("MainWindow: Scan finished, navigating to clean page")
             pageStack.push(cleanPage)
         }
     }
