@@ -11,33 +11,34 @@ Item {
 
     // 使用 ScanManager 提供的树形结构数据
     property var treeData: []
+    property var initialTreeData: []
 
     // 监听 ScanManager 的 treeResult 变化
     Connections {
         target: ScanManager
         function onTreeResultChanged() {
-            // 直接使用 ScanManager 提供的树形结构
-            var result = ScanManager.treeResult;
-            console.log("TreeResult changed, node count:", result ? result.length : 0);
-            if (result && result.length > 0) {
-                // 打印每个节点的基本信息
-                for (var i = 0; i < result.length; i++) {
-                    console.log("Root node", i, ":", result[i].name, "path:", result[i].path,
-                                "hasChildren:", result[i].hasChildren);
-                }
+            var newResult = ScanManager.treeResult;
+            console.log("CleanPage: ScanManager.treeResult changed (signal), new count:", newResult ? newResult.length : "null/undefined");
+            if (newResult && Array.isArray(newResult)) {
+                cleanPage.treeData = newResult;
             } else {
-                console.log("Tree result is empty");
+                // If newResult is null, undefined, or not an array, set treeData to empty array
+                // to avoid errors in ListView model.
+                cleanPage.treeData = [];
             }
-            cleanPage.treeData = result;
+            console.log("CleanPage: onTreeResultChanged final treeData count:", cleanPage.treeData.length);
         }
 
-        // 监听扫描完成信号
+        // The onScanFinished connection in CleanPage is likely redundant now.
+        // For now, let's comment it out to see if the new mechanism is sufficient.
+        /*
         function onScanFinished() {
             console.log("Scan finished, requesting tree data");
             var result = ScanManager.treeResult;
             console.log("Current tree data node count:", result ? result.length : 0);
             cleanPage.treeData = result;
         }
+        */
     }
 
     // 请求加载子节点
@@ -71,14 +72,22 @@ Item {
 
     // 组件初始化完成时尝试获取数据
     Component.onCompleted: {
-        console.log("CleanPage completed, tree data count:", cleanPage.treeData.length);
-
-        // 主动请求树形数据
-        var result = ScanManager.treeResult;
-        console.log("Manual check treeResult count:", result ? result.length : 0);
-        if (result && result.length > 0) {
-            cleanPage.treeData = result;
+        // Use initialTreeData if provided and it's a valid array
+        if (initialTreeData && Array.isArray(initialTreeData) && initialTreeData.length > 0) {
+            console.log("CleanPage: Using initialTreeData, count:", initialTreeData.length);
+            cleanPage.treeData = initialTreeData;
+        } else {
+            // Fallback: if initialTreeData is not valid or empty, try fetching from ScanManager directly
+            var currentResult = ScanManager.treeResult;
+            console.log("CleanPage: Fallback to ScanManager.treeResult, count:", currentResult ? currentResult.length : "null/undefined");
+            // Ensure treeData is an array, even if currentResult is null/undefined or not an array
+            if (currentResult && Array.isArray(currentResult)) {
+                cleanPage.treeData = currentResult;
+            } else {
+                cleanPage.treeData = []; // Default to empty array if ScanManager's result is also problematic
+            }
         }
+        console.log("CleanPage: Component.onCompleted final treeData count:", cleanPage.treeData.length);
     }
 
     // 观察 treeData 变化

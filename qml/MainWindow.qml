@@ -56,7 +56,9 @@ ApplicationWindow {
         target: ScanManager
         function onScanFinished() {
             console.log("MainWindow: Scan finished, navigating to clean page")
-            pageStack.push(cleanPage)
+            var currentTreeData = ScanManager.treeResult;
+            console.log("MainWindow: Data for CleanPage, count:", currentTreeData ? currentTreeData.length : "null/undefined");
+            pageStack.push(cleanPage, {"initialTreeData": currentTreeData})
         }
     }
 
