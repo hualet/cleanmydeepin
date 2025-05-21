@@ -13,6 +13,7 @@ Item {
     property var treeData: []
     property var initialTreeData: []
 
+    /*
     // 监听 ScanManager 的 treeResult 变化
     Connections {
         target: ScanManager
@@ -40,6 +41,7 @@ Item {
         }
         */
     }
+    */
 
     // 请求加载子节点
     function loadChildrenFor(node) {
@@ -72,19 +74,39 @@ Item {
 
     // 组件初始化完成时尝试获取数据
     Component.onCompleted: {
-        // Use initialTreeData if provided and it's a valid array
+        console.log("CleanPage: Component.onCompleted started.");
+        console.log("CleanPage: Received initialTreeData type:", typeof initialTreeData, "is array:", Array.isArray(initialTreeData));
+
+        // Attempt to log initialTreeData content. JSON.stringify might be problematic for QML/C++ objects.
+        // If it causes errors, this specific log line might need to be removed or adjusted.
+        try {
+            console.log("CleanPage: initialTreeData (JSON):", JSON.stringify(initialTreeData));
+            if (initialTreeData && typeof initialTreeData.length === 'number') {
+                 console.log("CleanPage: initialTreeData.length:", initialTreeData.length);
+            }
+        } catch (e) {
+            console.log("CleanPage: Could not JSON.stringify initialTreeData or get length directly. Error:", e.message);
+        }
+
         if (initialTreeData && Array.isArray(initialTreeData) && initialTreeData.length > 0) {
-            console.log("CleanPage: Using initialTreeData, count:", initialTreeData.length);
+            console.log("CleanPage: Using initialTreeData. Count:", initialTreeData.length);
             cleanPage.treeData = initialTreeData;
+            console.log("CleanPage: treeData length after assignment from initialTreeData:", cleanPage.treeData.length);
         } else {
-            // Fallback: if initialTreeData is not valid or empty, try fetching from ScanManager directly
+            console.log("CleanPage: initialTreeData is not suitable. Falling back to ScanManager.treeResult.");
             var currentResult = ScanManager.treeResult;
-            console.log("CleanPage: Fallback to ScanManager.treeResult, count:", currentResult ? currentResult.length : "null/undefined");
-            // Ensure treeData is an array, even if currentResult is null/undefined or not an array
+            console.log("CleanPage: Fallback ScanManager.treeResult type:", typeof currentResult, "is array:", Array.isArray(currentResult));
+            if (currentResult && typeof currentResult.length === 'number') {
+                 console.log("CleanPage: Fallback ScanManager.treeResult.length:", currentResult.length);
+            }
+
             if (currentResult && Array.isArray(currentResult)) {
                 cleanPage.treeData = currentResult;
+                console.log("CleanPage: treeData length after assignment from fallback ScanManager.treeResult:", cleanPage.treeData.length);
             } else {
-                cleanPage.treeData = []; // Default to empty array if ScanManager's result is also problematic
+                console.log("CleanPage: Fallback ScanManager.treeResult is also not a valid array. Setting treeData to empty.");
+                cleanPage.treeData = [];
+                console.log("CleanPage: treeData length after setting to empty array:", cleanPage.treeData.length);
             }
         }
         console.log("CleanPage: Component.onCompleted final treeData count:", cleanPage.treeData.length);
