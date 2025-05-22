@@ -21,6 +21,7 @@ file(GLOB_RECURSE HEADERS
 add_executable(${PROJECT_NAME}
     ${SOURCES}
     ${HEADERS}
+    qml.qrc
 )
 
 # 设置输出文件名，避免与目录名冲突
