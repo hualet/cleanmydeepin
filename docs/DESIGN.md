@@ -91,6 +91,53 @@ cleanmydeepin/
 - ~/.local/share/Trash
 - ~/.thumbnails
 
+数据结构设计：
+
+```cpp
+// 单个扫描项结构体
+struct ScanItem {
+    QString name;         // 文件/目录名
+    QString path;         // 绝对路径
+    bool isDir;           // 是否为目录
+    qint64 size;          // 文件大小（目录为0或统计值）
+    QList<ScanItem> children; // 子节点（仅目录有，文件为空）
+};
+
+// QVariantMap/QVariantList 形式（便于 QML 交互）
+// 单个节点用 QVariantMap 表示
+QVariantMap scanItem = {
+    {"name", "xxx"},           // 文件/目录名
+    {"path", "/xxx/xxx"},      // 绝对路径
+    {"isDir", true},           // 是否为目录
+    {"size", 12345},           // 文件大小
+    {"children", QVariantList{ // 子节点列表
+        QVariantMap{
+            {"name", "child1"},
+            {"path", "/xxx/xxx/child1"},
+            {"isDir", false},
+            {"size", 2345},
+            {"children", QVariantList{}}
+        },
+        QVariantMap{
+            {"name", "child2"},
+            {"path", "/xxx/xxx/child2"},
+            {"isDir", true},
+            {"size", 0},
+            {"children", QVariantList{
+                // ... 递归嵌套
+            }}
+        }
+    }}
+};
+
+// 整体扫描结果为 QVariantList
+QVariantList scanResult = {
+    scanItem1, // 根节点1
+    scanItem2, // 根节点2
+    // ...
+};
+```
+
 ### 2. 清理流程
 - 用户在清理页勾选/全选垃圾项
 - 点击"清理"按钮，弹出二次确认弹窗
