@@ -49,7 +49,13 @@ Item {
         if (!node.childrenLoaded) {
             // 通过 ScanManager 获取子节点
             var children = ScanManager.getChildren(node.path);
-            console.log("Children loaded:", children ? children.length : 0, "for path:", node.path);
+
+            // New lines replacing the old console.log:
+            var numChildren = 0;
+            if (children && typeof children.length === 'number') {
+                numChildren = children.length;
+            }
+            console.log("Children loaded count:", numChildren, "for path:", node.path);
 
             // 打印子节点信息
             if (children && children.length > 0) {
