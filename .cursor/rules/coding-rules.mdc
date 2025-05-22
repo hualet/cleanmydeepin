@@ -23,6 +23,7 @@ alwaysApply: true
 ### QML 代码
 
 - 定位内容 anchors.xxx 全都放到组件代码最末端
+- 避免组件递归引用自己，导致无限递归问题
 
 
 ## 日志要求
