@@ -85,6 +85,10 @@ void ScanManager::scanDirectory(const QString &path, ScanItem &parentItem) {
     Logger::info(QString("Scanning directory: %1").arg(path));
 
     QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden, QDir::DirsFirst);
+
+    // 重置父目录大小
+    parentItem.size = 0;
+
     for (const QFileInfo &info : entries) {
         if (!m_scanning) return;
 
@@ -96,9 +100,13 @@ void ScanManager::scanDirectory(const QString &path, ScanItem &parentItem) {
 
         if (info.isDir()) {
             scanDirectory(info.absoluteFilePath(), item);
+            // 将子目录的大小累加到父目录
+            parentItem.size += item.size;
         } else {
             m_scannedFiles++;
             emit scannedFilesChanged();
+            // 将文件大小累加到父目录
+            parentItem.size += item.size;
         }
 
         parentItem.children.append(item);
@@ -119,7 +127,22 @@ QVariant ScanManager::getChildren(const QString &path) {
             child["name"] = info.fileName();
             child["path"] = info.absoluteFilePath();
             child["isDir"] = info.isDir();
-            child["size"] = info.isDir() ? 0 : info.size();
+
+            // 计算目录大小
+            qint64 totalSize = 0;
+            if (info.isDir()) {
+                // 创建一个临时的ScanItem来计算目录大小
+                ScanItem tempItem;
+                tempItem.name = info.fileName();
+                tempItem.path = info.absoluteFilePath();
+                tempItem.isDir = true;
+                scanDirectory(info.absoluteFilePath(), tempItem);
+                totalSize = tempItem.size;
+            } else {
+                totalSize = info.size();
+            }
+
+            child["size"] = totalSize;
             child["expanded"] = false;
             child["hasChildren"] = info.isDir() && !QDir(info.absoluteFilePath()).entryList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot).isEmpty();
             child["childrenLoaded"] = false;

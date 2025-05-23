@@ -103,22 +103,27 @@ Item {
         node.selected = selected;
         if (selected) {
             selectedNodes[node.path] = node;
+            // 直接使用节点的累计大小
+            selectedSize += node.size || 0;
+            // 只计算文件数量
             if (!node.isDir) {
                 selectedCount++;
-                selectedSize += node.size || 0;
             }
         } else {
             delete selectedNodes[node.path];
+            // 直接使用节点的累计大小
+            selectedSize -= node.size || 0;
+            // 只计算文件数量
             if (!node.isDir) {
                 selectedCount--;
-                selectedSize -= node.size || 0;
             }
         }
 
-        // 递归处理子节点
+        // 递归处理子节点，但不累加大小（因为父节点的size已经包含了子节点的大小）
         if (node.children) {
             for (var i = 0; i < node.children.length; i++) {
-                setNodeSelection(node.children[i], selected);
+                // 只更新选中状态，不累加大小
+                node.children[i].selected = selected;
             }
         }
     }
