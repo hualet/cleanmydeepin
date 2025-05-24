@@ -1,0 +1,3 @@
+# Git attributes configuration
+# 让 git diff 忽略 .specstory 目录下的所有文件
+.specstory/** -diff
