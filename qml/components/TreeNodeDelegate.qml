@@ -11,10 +11,27 @@ Item {
     property bool debug: false
     property int itemHeight: 32 * scaleFactor
 
-    // 添加默认值
+    // 添加默认值和强制更新机制
     property bool isSelected: node ? node.selected || false : false
     property bool isExpanded: node ? node.expanded || false : false
     property bool hasChildren: node ? (node.isDir && node.hasChildren) || false : false
+
+    // 添加强制刷新机制
+    property int updateTrigger: 0
+
+    function forceUpdate() {
+        updateTrigger++;
+    }
+
+    // 监听节点选中状态变化
+    onIsSelectedChanged: {
+        // 移除详细日志
+    }
+
+    // 监听节点属性变化
+    onNodeChanged: {
+        // 移除详细日志
+    }
 
     signal expanded(var node)
     signal selected(var node, bool checked)
@@ -40,10 +57,27 @@ Item {
                 width: 20 * scaleFactor
                 height: 20 * scaleFactor
                 anchors.verticalCenter: parent.verticalCenter
-                checked: isSelected
+
+                // 改进的绑定，响应强制更新
+                checked: {
+                    updateTrigger; // 触发重新计算
+                    return node ? (node.selected || false) : false;
+                }
+
                 onCheckedChanged: {
-                    if (node) {
+                    if (node && checked !== (node.selected || false)) {
                         nodeDelegate.selected(node, checked);
+                    }
+                }
+
+                // 监听节点属性变化
+                Connections {
+                    target: nodeDelegate
+                    function onNodeChanged() {
+                        if (node) {
+                            // 强制更新复选框状态
+                            nodeDelegate.forceUpdate();
+                        }
                     }
                 }
             }

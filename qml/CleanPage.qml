@@ -22,7 +22,7 @@ Item {
         target: ScanManager
         function onTreeResultChanged() {
             cleanPage.treeData = ScanManager.treeResult;
-            console.log("Tree data updated, root nodes count: " + cleanPage.treeData.length);
+            console.log("Tree data updated, root nodes count:", cleanPage.treeData.length);
             // 重置选择状态
             cleanPage.selectedNodes = {};
             cleanPage.selectedCount = 0;
@@ -37,20 +37,28 @@ Item {
 
     // 请求加载子节点
     function loadChildrenFor(node) {
-        console.log("Loading children for:", node.path,
-            "childrenLoaded:", node.childrenLoaded,
-            "expanded:", node.expanded);
+        console.log("Loading children for:", node.path);
 
         // 获取子节点（无论是否已加载过）
         var children = ScanManager.getChildren(node.path);
-        console.log("Children loaded:", children ? children.length : 0, "for path:", node.path);
 
         if (children && children.length > 0) {
-            for (var i = 0; i < Math.min(children.length, 5); i++) {
-                console.log("Child", i, ":", children[i].name, "path:", children[i].path);
-            }
-            if (children.length > 5) {
-                console.log("... and", (children.length - 5), "more children");
+            // 初始化子节点的状态
+            for (var j = 0; j < children.length; j++) {
+                children[j].expanded = false;
+                children[j].childrenLoaded = false;
+                // 继承父节点的选中状态
+                children[j].selected = node.selected || false;
+                children[j].hasChildren = children[j].isDir;
+
+                // 如果父节点被选中，需要将子节点也添加到选择列表中
+                if (node.selected) {
+                    selectedNodes[children[j].path] = children[j];
+                    selectedSize += children[j].size || 0;
+                    if (!children[j].isDir) {
+                        selectedCount++;
+                    }
+                }
             }
         }
 
@@ -63,7 +71,8 @@ Item {
         function updateNodeInTree(nodes) {
             for (var i = 0; i < nodes.length; i++) {
                 if (nodes[i].path === node.path) {
-                    nodes[i] = node;
+                    // 使用深度复制来保持状态
+                    nodes[i] = deepCopyNodeWithSelection(node);
                     return true;
                 }
                 if (nodes[i].children && nodes[i].children.length > 0) {
@@ -78,85 +87,88 @@ Item {
         // 创建新的树形数据副本并更新节点
         var newTreeData = [];
         for (var j = 0; j < cleanPage.treeData.length; j++) {
-            var rootNode = Object.assign({}, cleanPage.treeData[j]);
-            if (rootNode.children) {
-                rootNode.children = rootNode.children.slice();
-            }
-            newTreeData.push(rootNode);
+            newTreeData.push(deepCopyNodeWithSelection(cleanPage.treeData[j]));
         }
 
         // 更新节点
-        if (updateNodeInTree(newTreeData)) {
-            console.log("Node updated in tree:", node.path);
-        } else {
-            console.log("Failed to update node in tree:", node.path);
-        }
+        updateNodeInTree(newTreeData);
 
         // 更新树形数据
         cleanPage.treeData = newTreeData;
+
+        // 强制更新视图以确保新加载的子节点状态正确显示
+        forceTreeViewUpdate();
     }
 
     // 递归设置节点选中状态
     function setNodeSelection(node, selected) {
-        if (!node) return;
+        if (!node) {
+            console.log("setNodeSelection: node is null or undefined");
+            return;
+        }
 
         node.selected = selected;
         if (selected) {
             selectedNodes[node.path] = node;
-            // 直接使用节点的累计大小
             selectedSize += node.size || 0;
-            // 只计算文件数量
             if (!node.isDir) {
                 selectedCount++;
             }
         } else {
             delete selectedNodes[node.path];
-            // 直接使用节点的累计大小
             selectedSize -= node.size || 0;
-            // 只计算文件数量
             if (!node.isDir) {
                 selectedCount--;
             }
         }
 
-        // 递归处理子节点，但不累加大小（因为父节点的size已经包含了子节点的大小）
-        if (node.children) {
+        // 递归处理子节点
+        if (node.children && node.children.length > 0) {
             for (var i = 0; i < node.children.length; i++) {
-                // 只更新选中状态，不累加大小
-                node.children[i].selected = selected;
+                setNodeSelection(node.children[i], selected);
             }
+        }
+
+        // 验证状态是否正确设置（仅在出现问题时输出警告）
+        if (selected && !selectedNodes.hasOwnProperty(node.path)) {
+            console.log("WARNING: node not found in selectedNodes:", node.path);
+        } else if (!selected && selectedNodes.hasOwnProperty(node.path)) {
+            console.log("WARNING: node still in selectedNodes:", node.path);
         }
     }
 
     // 全选所有节点
     function selectAll() {
         console.log("Selecting all nodes");
+
+        // 重置选择状态
+        selectedNodes = {};
+        selectedCount = 0;
+        selectedSize = 0;
+
         for (var i = 0; i < treeData.length; i++) {
             setNodeSelection(treeData[i], true);
         }
-        // 强制更新视图
-        var temp = treeData;
-        treeData = [];
-        treeData = temp;
+
+        // 使用新的强制更新函数
+        forceTreeViewUpdate();
     }
 
     // 取消全选
     function deselectAll() {
         console.log("Deselecting all nodes");
+
         for (var i = 0; i < treeData.length; i++) {
             setNodeSelection(treeData[i], false);
         }
-        // 强制更新视图
-        var temp = treeData;
-        treeData = [];
-        treeData = temp;
+
+        // 使用新的强制更新函数
+        forceTreeViewUpdate();
     }
 
     // 组件初始化完成时尝试获取数据
     Component.onCompleted: {
-        console.log("CleanPage completed, tree data count:", cleanPage.treeData.length);
         var result = ScanManager.treeResult;
-        console.log("Manual check treeResult count:", result ? result.length : 0);
         if (result && result.length > 0) {
             // 初始化根节点的状态
             for (var i = 0; i < result.length; i++) {
@@ -167,12 +179,13 @@ Item {
                 result[i].hasChildren = result[i].isDir;
             }
             cleanPage.treeData = result;
+            console.log("CleanPage initialized with", result.length, "root nodes");
         }
     }
 
     // 观察 treeData 变化
     onTreeDataChanged: {
-        console.log("treeData changed, new count:", treeData.length);
+        // 移除详细日志
     }
 
     // 临时按钮 - 测试树形数据
@@ -271,13 +284,14 @@ Item {
 
                         // 修改为使用函数处理信号
                         function handleExpanded(expandedNode) {
-                            console.log("Item expanded signal received, loading children for:", expandedNode.path);
                             cleanPage.loadChildrenFor(expandedNode);
                         }
 
                         function handleSelected(selectedNode, checked) {
-                            console.log("Item selected signal received:", selectedNode.path, checked);
                             cleanPage.setNodeSelection(selectedNode, checked);
+
+                            // 强制更新视图以确保UI同步
+                            cleanPage.forceTreeViewUpdate();
                         }
 
                         onExpanded: handleExpanded(node)
@@ -363,5 +377,51 @@ Item {
         onClicked: {
             // TODO: 实现清理逻辑
         }
+    }
+
+    // 深度复制树节点并保持选中状态
+    function deepCopyNodeWithSelection(node) {
+        if (!node) return null;
+
+        var newNode = {};
+        // 复制所有基本属性
+        newNode.path = node.path;
+        newNode.name = node.name;
+        newNode.size = node.size;
+        newNode.isDir = node.isDir;
+        newNode.expanded = node.expanded;
+        newNode.childrenLoaded = node.childrenLoaded;
+        newNode.hasChildren = node.hasChildren;
+
+        // 从 selectedNodes 中获取正确的选中状态
+        newNode.selected = selectedNodes.hasOwnProperty(node.path);
+
+        // 递归复制子节点
+        if (node.children && node.children.length > 0) {
+            newNode.children = [];
+            for (var i = 0; i < node.children.length; i++) {
+                newNode.children.push(deepCopyNodeWithSelection(node.children[i]));
+            }
+        }
+
+        return newNode;
+    }
+
+    // 强制更新树形视图
+    function forceTreeViewUpdate() {
+        // 深度复制树数据并保持选中状态
+        var newTreeData = [];
+        for (var i = 0; i < treeData.length; i++) {
+            newTreeData.push(deepCopyNodeWithSelection(treeData[i]));
+        }
+
+        // 使用新的数据替换原有数据
+        treeData = [];
+        treeData = newTreeData;
+
+        // 强制更新选择状态属性
+        selectedNodesChanged();
+        selectedCountChanged();
+        selectedSizeChanged();
     }
 }
