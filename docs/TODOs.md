@@ -1,7 +1,9 @@
 
--[] 界面风格化(dtk)
--[] ci/cd
--[] deb/linglong
+-[ ] 界面风格化(dtk)
+-[ ] ci/cd
+-[ ] deb/linglong
+-[ ] 单元测试
+-[ ] 翻译
 
 ## BUGs
 
