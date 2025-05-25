@@ -1,170 +1,214 @@
-# CleanMyDeepin 项目设计文档
+# CleanMyDeepin 项目核心设计文档
 
-## 一、架构设计
+## 一、项目概述
 
-本项目采用 QML + C++ 技术栈，前端界面使用 QML 实现，后端逻辑与系统操作由 C++ 实现，通过 Qt 的信号槽机制进行通信。整体采用前后端分离、模块化设计，保证良好的可维护性与扩展性。
+CleanMyDeepin 是一款专为 deepin 操作系统设计的系统垃圾清理工具，采用 QML + C++ 前后端分离架构，旨在为用户提供高效、安全的系统清理体验。
 
-### 1. 总体架构图
+## 二、核心架构设计
+
+### 1. 整体架构
 
 ```
-+-------------------+         +-------------------+
-|    QML 前端界面    | <-----> |   C++ 后端逻辑     |
-+-------------------+         +-------------------+
-         |                              |
-         |         Qt 信号/槽           |
-         +------------------------------+
+┌─────────────────┐    Qt 信号/槽    ┌─────────────────┐
+│   QML 前端层     │ ←──────────────→ │   C++ 后端层     │
+├─────────────────┤                 ├─────────────────┤
+│ MainWindow.qml  │                 │ ScanManager     │
+│ ScanPage.qml    │                 │ CleanManager    │
+│ CleanPage.qml   │                 │ ConfigManager   │
+│ SettingsPage.qml│                 │ Translator      │
+│ HelpPage.qml    │                 │ Logger          │
+└─────────────────┘                 └─────────────────┘
 ```
 
-- QML 负责 UI 展示、用户交互、动画效果等。
-- C++ 负责文件扫描、清理、系统操作、配置管理等。
-- 二者通过 Qt 的 Q_PROPERTY、信号槽、Q_INVOKABLE 等机制通信。
+**设计原则：**
+- 前端负责 UI 展示和用户交互
+- 后端负责业务逻辑和系统操作
+- 通过 Qt 属性绑定和信号槽机制实现通信
+- 严格的模块化分离，避免耦合
 
-## 二、目录结构
+### 2. 目录结构约定
 
 ```
 cleanmydeepin/
-├── src/
-│   ├── main.cpp
-│   ├── log/
-│   │   ├── logger.h
-│   │   └── logger.cpp
-│   ├── core/
-│   │   ├── scanmanager.h/cpp
-│   │   ├── cleanmanager.h/cpp
-│   │   ├── configmanager.h/cpp
-│   │   └── translator.h/cpp
-├── qml/
-│   ├── MainWindow.qml
-│   ├── ScanPage.qml
-│   ├── CleanPage.qml
-│   ├── SettingsPage.qml
-│   ├── HelpPage.qml
-│   └── components/
-├── docs/
-│   ├── PRD.md
-│   └── 设计文档.md
-├── translations/
-├── resources/
+├── src/                    # C++ 源码
+│   ├── main.cpp           # 应用程序入口
+│   ├── core/              # 核心业务模块
+│   │   ├── scanmanager.*  # 扫描管理器
+│   │   ├── cleanmanager.* # 清理管理器
+│   │   ├── configmanager.*# 配置管理器
+│   │   └── translator.*   # 国际化管理器
+│   └── log/               # 日志模块
+│       └── logger.*       # 统一日志接口
+├── qml/                   # QML 界面文件
+│   ├── MainWindow.qml     # 主窗口
+│   ├── *Page.qml          # 各功能页面
+│   └── components/        # 可复用组件
+└── docs/                  # 项目文档
 ```
 
-## 三、主要模块说明
+## 三、核心数据结构
 
-### 1. C++ 后端类
-- **Logger**：统一日志接口，所有日志输出为英文，便于调试和维护。
-- **ScanManager**：负责垃圾文件扫描，提供 startScan/stopScan 方法，信号包括 scanProgress、scanFinished、scanInterrupted。
-- **CleanManager**：负责垃圾文件清理，提供 startClean 方法，信号包括 cleanProgress、cleanFinished。
-- **ConfigManager**：负责配置项管理，支持开机自启等配置，Q_PROPERTY 支持 QML 绑定。
-- **Translator**：负责多语言切换，支持 QML 调用。
+### 1. 扫描项数据结构
 
-### 2. QML 前端页面
-- **MainWindow.qml**：主窗口，包含左侧标签栏和右侧页面内容区，支持高分屏缩放。
-- **ScanPage.qml**：扫描页，包含扫描按钮、进度条、状态文本和中断按钮。
-- **CleanPage.qml**：清理页，包含树形文件视图、全选/反选、底部清理按钮。
-- **SettingsPage.qml**：设置页，包含开机自启、忽略目录/类型列表、保存按钮。
-- **HelpPage.qml**：帮助页，包含功能说明和 FAQ。
+```cpp
+// C++ 端数据结构
+struct ScanItem {
+    QString name;         // 文件/目录名
+    QString path;         // 绝对路径
+    bool isDir;          // 是否为目录
+    qint64 size;         // 文件大小
+    QList<ScanItem> children; // 子节点
+};
 
-### 3. 信号与槽
-- QML 通过调用 C++ 的 Q_INVOKABLE 方法发起操作，C++ 通过信号反馈进度和结果，QML 绑定信号实现界面实时更新。
+// QML 端数据结构 (QVariantMap)
+{
+    "name": "filename",
+    "path": "/absolute/path",
+    "isDir": true/false,
+    "size": 12345,
+    "expanded": false,        // UI 状态：是否展开
+    "hasChildren": true,      // UI 状态：是否有子节点
+    "childrenLoaded": false,  // UI 状态：子节点是否已加载
+    "selected": false,        // UI 状态：是否被选中
+    "children": []            // 子节点数组
+}
+```
 
-### 4. 国际化与高分屏
-- 所有界面文案均使用 `qsTr`，源语言为英文，支持 Qt Linguist 翻译。
-- 所有控件尺寸、间距均考虑 `scaleFactor`，适配高分屏。
+**关键设计点：**
+- 树形结构支持无限层级嵌套
+- 数据与 UI 状态分离，便于状态管理
+- 延迟加载子节点，提升性能
 
-### 5. 日志与注释
-- 日志统一使用 Logger 模块，输出英文。
-- 代码注释统一为中文，便于团队协作。
+### 2. 扫描路径配置
+
+```cpp
+// 扫描目标路径
+const QStringList ScanManager::kScanPaths = {
+    "/tmp",                                    // 临时文件
+    "/var/tmp",                               // 系统临时文件
+    "/var/log",                               // 系统日志
+    "~/.thumbnails"                           // 缩略图缓存
+    // 注：部分路径已注释，可根据需要启用
+};
+```
 
 ## 四、关键流程设计
 
 ### 1. 扫描流程
-- 用户点击"扫描"按钮
-- QML 触发信号，调用 C++ ScanManager::startScan()
-- ScanManager 按类型/目录扫描垃圾文件，实时通过信号反馈进度、当前状态、已发现文件数
-- QML 进度条、状态文本实时更新，支持"中断"按钮
-- 扫描完成后，ScanManager 返回结果，QML 跳转到清理页并展示树状文件列表
 
-扫描的位置包括：
-- /tmp
-- /var/tmp
-- /var/log
-- ~/.cache
-- ~/.local/share/Trash
-- ~/.thumbnails
-
-数据结构设计：
-
-```cpp
-// 单个扫描项结构体
-struct ScanItem {
-    QString name;         // 文件/目录名
-    QString path;         // 绝对路径
-    bool isDir;           // 是否为目录
-    qint64 size;          // 文件大小（目录为0或统计值）
-    QList<ScanItem> children; // 子节点（仅目录有，文件为空）
-};
-
-// QVariantMap/QVariantList 形式（便于 QML 交互）
-// 单个节点用 QVariantMap 表示
-QVariantMap scanItem = {
-    {"name", "xxx"},           // 文件/目录名
-    {"path", "/xxx/xxx"},      // 绝对路径
-    {"isDir", true},           // 是否为目录
-    {"size", 12345},           // 文件大小
-    {"children", QVariantList{ // 子节点列表
-        QVariantMap{
-            {"name", "child1"},
-            {"path", "/xxx/xxx/child1"},
-            {"isDir", false},
-            {"size", 2345},
-            {"children", QVariantList{}}
-        },
-        QVariantMap{
-            {"name", "child2"},
-            {"path", "/xxx/xxx/child2"},
-            {"isDir", true},
-            {"size", 0},
-            {"children", QVariantList{
-                // ... 递归嵌套
-            }}
-        }
-    }}
-};
-
-// 整体扫描结果为 QVariantList
-QVariantList scanResult = {
-    scanItem1, // 根节点1
-    scanItem2, // 根节点2
-    // ...
-};
+```
+用户点击扫描 → ScanManager::startScan() → 异步线程扫描
+     ↓
+进度更新信号 ← QMetaObject::invokeMethod ← 工作线程
+     ↓
+扫描完成 → scanFinished 信号 → CleanPage 展示结果
 ```
 
-### 2. 清理流程
-- 用户在清理页勾选/全选垃圾项
-- 点击"清理"按钮，弹出二次确认弹窗
-- 确认后，QML 调用 C++ CleanManager::startClean()
-- CleanManager 依次删除选中文件，实时反馈进度、当前处理项
-- 清理完成后，返回结果（释放空间、失败项），QML 弹窗提示
+**核心实现：**
+- 使用 QThread 异步扫描，避免阻塞 UI
+- 通过 QMetaObject::invokeMethod 跨线程更新进度
+- 扫描结果转换为 QVariantList 传递给 QML
 
-### 3. 设置与帮助
-- 设置页通过 QML 绑定 ConfigManager，支持开机自启、忽略目录等配置
-- 帮助页展示内置文档，支持常见问题解答
+### 2. 树形展示流程
 
-## 五、技术实现要点
+```
+根节点展示 → 用户点击展开 → loadChildrenFor()
+     ↓
+ScanManager::getChildren() → 构建子节点数据
+     ↓
+更新 treeData → 强制刷新视图 → 展示子节点
+```
 
-- **QML 动画与深色/浅色自适应**：使用 Qt Quick Controls 2，支持主题切换，动画流畅
-- **C++ 文件操作权限**：需适配 deepin 权限模型，部分操作需 sudo/提权
-- **进度与中断机制**：扫描/清理过程采用异步线程，支持实时进度与中断
-- **树形数据结构**：扫描结果以树形结构传递给 QML，支持分组与展开
-- **本地化**：采用 Qt Linguist，支持多语言切换
-- **异常与安全保护**：关键目录保护、二次确认、失败友好提示
-- **日志与调试**：所有关键操作均有日志输出，便于问题定位
+**关键机制：**
+- 延迟加载：只在用户展开时加载子节点
+- 状态同步：通过 `deepCopyNodeWithSelection` 保持选中状态
+- 视图更新：通过 `forceTreeViewUpdate` 强制刷新
 
-## 六、后续扩展建议
+### 3. 选择状态管理
 
-- 支持定时清理、清理历史、插件扩展等
-- 深度清理、智能推荐等高级功能
-- UI 进一步美化，适配更多分辨率
+```
+节点选择 → setNodeSelection() → 递归更新子节点
+     ↓
+更新 selectedNodes 映射 → 计算统计信息
+     ↓
+强制视图更新 → UI 同步显示
+```
+
+**核心算法：**
+```javascript
+function setNodeSelection(node, selected) {
+    // 更新当前节点
+    node.selected = selected;
+
+    // 更新选择映射和统计
+    if (selected) {
+        selectedNodes[node.path] = node;
+        selectedSize += node.size || 0;
+        if (!node.isDir) selectedCount++;
+    } else {
+        delete selectedNodes[node.path];
+        selectedSize -= node.size || 0;
+        if (!node.isDir) selectedCount--;
+    }
+
+    // 递归处理子节点
+    if (node.children) {
+        for (var i = 0; i < node.children.length; i++) {
+            setNodeSelection(node.children[i], selected);
+        }
+    }
+}
+```
+
+## 五、架构约束与原则
+
+### 1. 模块职责边界
+
+- **ScanManager**: 只负责文件扫描和数据构建，不涉及 UI 状态
+- **CleanPage**: 只负责数据展示和用户交互，不直接操作文件系统
+- **FileTreeItem**: 只负责单个节点的展示，不处理业务逻辑
+
+### 2. 数据流向
+
+```
+C++ 数据源 → QVariant 转换 → QML 属性绑定 → UI 展示
+    ↑                                        ↓
+信号反馈 ← Q_INVOKABLE 方法 ← 用户交互 ← 事件处理
+```
+
+### 3. 状态管理原则
+
+- UI 状态与业务数据分离
+- 使用不可变数据更新模式
+- 状态变更必须通过规定的函数接口
+
+### 4. 性能考虑
+
+- 延迟加载：大型目录结构按需加载
+- 异步处理：长时间操作使用工作线程
+- 视图优化：最小化不必要的数据绑定
+
+## 六、扩展点设计
+
+### 1. 新增扫描类型
+- 在 `kScanPaths` 中添加新路径
+- 扩展 `ScanItem` 结构体添加类型标识
+
+### 2. 新增 UI 组件
+- 在 `qml/components/` 下添加可复用组件
+- 遵循现有的属性和信号命名约定
+
+### 3. 新增管理器模块
+- 继承 QObject，使用 Q_PROPERTY 和信号槽
+- 在 main.cpp 中注册为 QML 上下文属性
+
+## 七、注意事项
+
+1. **避免递归引用**: QML 组件不能引用自己，使用 Repeater 处理递归结构
+2. **内存管理**: C++ 对象的生命周期管理，避免悬挂指针
+3. **跨线程操作**: 使用 QMetaObject::invokeMethod 进行线程间通信
+4. **状态一致性**: 数据更新时必须保持 UI 状态同步
 
 ---
 
-本设计文档为 CleanMyDeepin 项目开发的技术蓝图，后续可根据实际开发情况进行细化和调整。
+**重要提醒**: 修改此项目时，必须遵循上述架构设计，避免破坏模块边界和数据流向。任何重大变更应先更新此设计文档。
