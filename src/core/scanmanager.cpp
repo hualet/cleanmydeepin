@@ -20,13 +20,10 @@ struct ScanItem {
 };
 
 // 扫描目录常量定义
-const QStringList ScanManager::kScanPaths = {
-    "/tmp",
-    "/var/tmp",
-    "/var/log",
-    // QString::fromUtf8(qgetenv("HOME")) + "/.cache",
-    // QString::fromUtf8(qgetenv("HOME")) + "/.local/share/Trash",
-    QString::fromUtf8(qgetenv("HOME")) + "/.thumbnails"
+const QMap<QString, QString> ScanManager::kScanPaths = {
+    {QObject::tr("System Logs"), "/var/log"},
+    // {QObject::tr("User Cache"), QString::fromUtf8(qgetenv("HOME")) + "/.cache"},
+    {QObject::tr("Trash"), QString::fromUtf8(qgetenv("HOME")) + "/.local/share/Trash"}
 };
 
 // 构造函数
@@ -189,11 +186,14 @@ void ScanManager::startScan() {
         int currentDir = 0;
 
         QVariantList rootNodes;
-        for (const QString &path : kScanPaths) {
+        for (auto it = kScanPaths.begin(); it != kScanPaths.end(); ++it) {
             if (!m_scanning) break;
 
+            const QString &name = it.key();
+            const QString &path = it.value();
+
             ScanItem rootItem;
-            rootItem.name = QFileInfo(path).fileName();
+            rootItem.name = name;
             rootItem.path = path;
             rootItem.isDir = true;
             rootItem.size = 0;

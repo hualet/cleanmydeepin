@@ -33,7 +33,7 @@ public:
     QVariant scanResult() const;
 
     // 扫描目录常量
-    static const QStringList kScanPaths;
+    static const QMap<QString, QString> kScanPaths;
 
 public slots:
     void startScan();
