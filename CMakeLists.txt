@@ -56,3 +56,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 # 安装规则
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+# 启用测试
+option(BUILD_TESTS "Build unit tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

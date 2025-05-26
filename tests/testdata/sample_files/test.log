@@ -1,0 +1,6 @@
+2024-01-01 10:00:00 INFO Application started
+2024-01-01 10:00:01 DEBUG Loading configuration
+2024-01-01 10:00:02 INFO Configuration loaded successfully
+2024-01-01 10:00:03 WARN Some warning message
+2024-01-01 10:00:04 ERROR An error occurred
+2024-01-01 10:00:05 INFO Application finished

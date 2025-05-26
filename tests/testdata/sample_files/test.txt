@@ -1,0 +1,3 @@
+This is a sample test file for unit testing.
+It contains some basic text content.
+Used for testing file scanning and cleaning functionality.
