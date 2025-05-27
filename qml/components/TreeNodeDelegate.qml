@@ -11,9 +11,11 @@ Item {
     property bool debug: false
     property int itemHeight: 32 * scaleFactor
 
+    // 展开状态完全由外部控制，不依赖节点数据
+    property bool isExpanded: false
+
     // 添加默认值和强制更新机制
     property bool isSelected: node ? node.selected || false : false
-    property bool isExpanded: node ? node.expanded || false : false
     property bool hasChildren: node ? (node.isDir && node.hasChildren) || false : false
 
     // 添加强制刷新机制
@@ -91,7 +93,8 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: isExpanded ? "▼" : "▶"
+                    // 使用外部传入的 isExpanded 状态，不依赖节点数据
+                    text: nodeDelegate.isExpanded ? "▼" : "▶"
                     color: "#333333"
                     font.pixelSize: 12 * scaleFactor
                 }

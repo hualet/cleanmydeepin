@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Window 2.15
+import "." // 导入当前目录下的组件
 
 ApplicationWindow {
     id: mainWindow

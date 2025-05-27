@@ -21,7 +21,14 @@ Item {
     Connections {
         target: ScanManager
         function onTreeResultChanged() {
-            cleanPage.treeData = ScanManager.treeResult;
+            var result = ScanManager.treeResult;
+            // 初始化根节点状态，不设置 expanded
+            for (var i = 0; i < result.length; i++) {
+                result[i].childrenLoaded = false;
+                result[i].selected = false;
+                result[i].hasChildren = result[i].isDir;
+            }
+            cleanPage.treeData = result;
             console.log("Tree data updated, root nodes count:", cleanPage.treeData.length);
             // 重置选择状态
             cleanPage.selectedNodes = {};
@@ -30,6 +37,12 @@ Item {
         }
 
         function onScanFinished(result) {
+            // 初始化根节点状态，不设置 expanded
+            for (var i = 0; i < result.length; i++) {
+                result[i].childrenLoaded = false;
+                result[i].selected = false;
+                result[i].hasChildren = result[i].isDir;
+            }
             cleanPage.treeData = result;
             console.log("Scan finished, tree data updated");
         }
@@ -45,7 +58,7 @@ Item {
         if (children && children.length > 0) {
             // 初始化子节点的状态
             for (var j = 0; j < children.length; j++) {
-                children[j].expanded = false;
+                // 不再设置 expanded 状态，界面自行控制
                 children[j].childrenLoaded = false;
                 // 继承父节点的选中状态
                 children[j].selected = node.selected || false;
@@ -65,7 +78,7 @@ Item {
         // 更新节点状态和子节点
         node.children = children || [];
         node.childrenLoaded = true;
-        node.expanded = true;
+        // 不再设置 expanded 状态，界面自行控制
 
         // 在树形数据中找到并更新这个节点
         function updateNodeInTree(nodes) {
@@ -172,7 +185,7 @@ Item {
         if (result && result.length > 0) {
             // 初始化根节点的状态
             for (var i = 0; i < result.length; i++) {
-                result[i].expanded = false;
+                // 不再设置 expanded 状态，界面自行控制
                 result[i].childrenLoaded = false;
                 result[i].selected = false;
                 // 默认设置目录都有子节点，实际加载时再更新
@@ -389,7 +402,7 @@ Item {
         newNode.name = node.name;
         newNode.size = node.size;
         newNode.isDir = node.isDir;
-        newNode.expanded = node.expanded;
+        // 不再复制 expanded 状态，界面自行控制
         newNode.childrenLoaded = node.childrenLoaded;
         newNode.hasChildren = node.hasChildren;
 
