@@ -133,19 +133,6 @@ Item {
         }
     }
 
-    // 临时按钮 - 测试树形数据
-    Button {
-        id: testBtn
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.margins: 10 * scaleFactor
-        text: qsTr("刷新树形数据")
-        onClicked: {
-            console.log("Manual refresh");
-            updateSelectionStats();
-        }
-    }
-
     // 树形文件视图 - 使用真正的 TreeView
     Item {
         id: treeViewContainer
