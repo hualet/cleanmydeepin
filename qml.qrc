@@ -4,7 +4,5 @@
         <file>qml/MainWindow.qml</file>
         <file>qml/CleanPage.qml</file>
         <file>qml/ScanPage.qml</file>
-        <file>qml/components/FileTreeItem.qml</file>
-        <file>qml/components/TreeNodeDelegate.qml</file>
     </qresource>
 </RCC>

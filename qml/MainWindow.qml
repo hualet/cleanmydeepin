@@ -39,9 +39,9 @@ ApplicationWindow {
         id: scanPage
 
         ScanPage {
-            progress: ScanManager.progress
-            scannedFiles: ScanManager.scannedFiles
-            scannedDirs: ScanManager.scannedDirs
+            progress: ScanManager ? ScanManager.progress : 0
+            scannedFiles: ScanManager ? ScanManager.scannedFiles : 0
+            scannedDirs: ScanManager ? ScanManager.scannedDirs : 0
         }
     }
 

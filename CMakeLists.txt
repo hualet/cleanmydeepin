@@ -40,7 +40,6 @@ qt_add_qml_module(${PROJECT_NAME}
         qml/CleanPage.qml
         qml/SettingsPage.qml
         qml/HelpPage.qml
-        qml/components/FileTreeItem.qml
     # 可添加更多 QML 组件
     RESOURCES
         # 可添加资源文件

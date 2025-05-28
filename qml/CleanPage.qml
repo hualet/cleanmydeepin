@@ -1,152 +1,93 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Window 2.15
-import "components" // 确保 FileTreeItem.qml 在 qml/components 目录下
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Window
 
 Item {
     id: cleanPage
 
-    // 高分屏缩放支持 - 降低缩放比例
-    property real scaleFactor: Screen.pixelDensity / 6.0  // 减小缩放因子，之前是2.0
-
-    // 使用 ScanManager 提供的树形结构数据
-    property var treeData: []
+    // 高分屏缩放支持
+    property real scaleFactor: Screen.pixelDensity / 6.0
 
     // 添加选中状态管理
-    property var selectedNodes: ({})
     property int selectedCount: 0
     property real selectedSize: 0
 
-    // 监听 ScanManager 的 treeResult 变化
+    // 监听 ScanManager 的 treeModel 变化
     Connections {
         target: ScanManager
-        function onTreeResultChanged() {
-            var result = ScanManager.treeResult;
-            // 初始化根节点状态，不设置 expanded
-            for (var i = 0; i < result.length; i++) {
-                result[i].childrenLoaded = false;
-                result[i].selected = false;
-                result[i].hasChildren = result[i].isDir;
-            }
-            cleanPage.treeData = result;
-            console.log("Tree data updated, root nodes count:", cleanPage.treeData.length);
+        function onTreeModelChanged() {
+            console.log("Tree model updated");
             // 重置选择状态
-            cleanPage.selectedNodes = {};
             cleanPage.selectedCount = 0;
             cleanPage.selectedSize = 0;
+            updateSelectionStats();
         }
 
         function onScanFinished(result) {
-            // 初始化根节点状态，不设置 expanded
-            for (var i = 0; i < result.length; i++) {
-                result[i].childrenLoaded = false;
-                result[i].selected = false;
-                result[i].hasChildren = result[i].isDir;
-            }
-            cleanPage.treeData = result;
-            console.log("Scan finished, tree data updated");
+            console.log("Scan finished, tree model updated");
+            updateSelectionStats();
         }
     }
 
-    // 请求加载子节点
-    function loadChildrenFor(node) {
-        console.log("Loading children for:", node.path);
+    // 更新选择统计信息
+    function updateSelectionStats() {
+        var count = 0;
+        var size = 0;
 
-        // 获取子节点（无论是否已加载过）
-        var children = ScanManager.getChildren(node.path);
+        if (ScanManager && ScanManager.treeModel) {
+            // 遍历模型计算选中项目
+            function countSelected(parentIndex) {
+                var rowCount = ScanManager.treeModel.rowCount(parentIndex);
+                for (var i = 0; i < rowCount; i++) {
+                    var index = ScanManager.treeModel.index(i, 0, parentIndex);
+                    var selected = ScanManager.treeModel.data(index, 261); // SelectedRole = 261
+                    var isDir = ScanManager.treeModel.data(index, 259); // IsDirRole = 259
+                    var itemSize = ScanManager.treeModel.data(index, 260); // SizeRole = 260
 
-        if (children && children.length > 0) {
-            // 初始化子节点的状态
-            for (var j = 0; j < children.length; j++) {
-                // 不再设置 expanded 状态，界面自行控制
-                children[j].childrenLoaded = false;
-                // 继承父节点的选中状态
-                children[j].selected = node.selected || false;
-                children[j].hasChildren = children[j].isDir;
-
-                // 如果父节点被选中，需要将子节点也添加到选择列表中
-                if (node.selected) {
-                    selectedNodes[children[j].path] = children[j];
-                    selectedSize += children[j].size || 0;
-                    if (!children[j].isDir) {
-                        selectedCount++;
+                    if (selected) {
+                        if (!isDir) {
+                            count++;
+                        }
+                        size += itemSize || 0;
                     }
+
+                    // 递归处理子节点
+                    countSelected(index);
                 }
             }
+
+            countSelected(ScanManager.treeModel.index(-1, -1)); // 根索引
         }
 
-        // 更新节点状态和子节点
-        node.children = children || [];
-        node.childrenLoaded = true;
-        // 不再设置 expanded 状态，界面自行控制
-
-        // 在树形数据中找到并更新这个节点
-        function updateNodeInTree(nodes) {
-            for (var i = 0; i < nodes.length; i++) {
-                if (nodes[i].path === node.path) {
-                    // 使用深度复制来保持状态
-                    nodes[i] = deepCopyNodeWithSelection(node);
-                    return true;
-                }
-                if (nodes[i].children && nodes[i].children.length > 0) {
-                    if (updateNodeInTree(nodes[i].children)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        // 创建新的树形数据副本并更新节点
-        var newTreeData = [];
-        for (var j = 0; j < cleanPage.treeData.length; j++) {
-            newTreeData.push(deepCopyNodeWithSelection(cleanPage.treeData[j]));
-        }
-
-        // 更新节点
-        updateNodeInTree(newTreeData);
-
-        // 更新树形数据
-        cleanPage.treeData = newTreeData;
-
-        // 强制更新视图以确保新加载的子节点状态正确显示
-        forceTreeViewUpdate();
+        cleanPage.selectedCount = count;
+        cleanPage.selectedSize = size;
     }
 
     // 递归设置节点选中状态
-    function setNodeSelection(node, selected) {
-        if (!node) {
-            console.log("setNodeSelection: node is null or undefined");
+    function setNodeSelection(index, selected) {
+        if (!ScanManager || !ScanManager.treeModel || !index.valid) {
+            console.log("setNodeSelection: Invalid parameters");
             return;
         }
 
-        node.selected = selected;
-        if (selected) {
-            selectedNodes[node.path] = node;
-            selectedSize += node.size || 0;
-            if (!node.isDir) {
-                selectedCount++;
-            }
-        } else {
-            delete selectedNodes[node.path];
-            selectedSize -= node.size || 0;
-            if (!node.isDir) {
-                selectedCount--;
-            }
+        // 获取节点信息用于调试
+        var nodeName = ScanManager.treeModel.data(index, 257); // NameRole = 257
+        var isDir = ScanManager.treeModel.data(index, 259); // IsDirRole = 259
+
+        // 设置当前节点选中状态
+        var success = ScanManager.treeModel.setData(index, selected, 261); // SelectedRole = 261
+        if (!success) {
+            console.log("setNodeSelection: Failed to set selection for '" + nodeName + "'");
+            return;
         }
 
         // 递归处理子节点
-        if (node.children && node.children.length > 0) {
-            for (var i = 0; i < node.children.length; i++) {
-                setNodeSelection(node.children[i], selected);
+        var rowCount = ScanManager.treeModel.rowCount(index);
+        for (var i = 0; i < rowCount; i++) {
+            var childIndex = ScanManager.treeModel.index(i, 0, index);
+            if (childIndex && childIndex.valid) {
+                setNodeSelection(childIndex, selected);
             }
-        }
-
-        // 验证状态是否正确设置（仅在出现问题时输出警告）
-        if (selected && !selectedNodes.hasOwnProperty(node.path)) {
-            console.log("WARNING: node not found in selectedNodes:", node.path);
-        } else if (!selected && selectedNodes.hasOwnProperty(node.path)) {
-            console.log("WARNING: node still in selectedNodes:", node.path);
         }
     }
 
@@ -154,51 +95,42 @@ Item {
     function selectAll() {
         console.log("Selecting all nodes");
 
-        // 重置选择状态
-        selectedNodes = {};
-        selectedCount = 0;
-        selectedSize = 0;
+        if (!ScanManager || !ScanManager.treeModel)
+            return;
 
-        for (var i = 0; i < treeData.length; i++) {
-            setNodeSelection(treeData[i], true);
+        // 遍历所有根节点
+        var rootRowCount = ScanManager.treeModel.rowCount();
+        for (var i = 0; i < rootRowCount; i++) {
+            var rootIndex = ScanManager.treeModel.index(i, 0);
+            setNodeSelection(rootIndex, true);
         }
 
-        // 使用新的强制更新函数
-        forceTreeViewUpdate();
+        updateSelectionStats();
     }
 
     // 取消全选
     function deselectAll() {
         console.log("Deselecting all nodes");
 
-        for (var i = 0; i < treeData.length; i++) {
-            setNodeSelection(treeData[i], false);
+        if (!ScanManager || !ScanManager.treeModel)
+            return;
+
+        // 遍历所有根节点
+        var rootRowCount = ScanManager.treeModel.rowCount();
+        for (var i = 0; i < rootRowCount; i++) {
+            var rootIndex = ScanManager.treeModel.index(i, 0);
+            setNodeSelection(rootIndex, false);
         }
 
-        // 使用新的强制更新函数
-        forceTreeViewUpdate();
+        updateSelectionStats();
     }
 
     // 组件初始化完成时尝试获取数据
     Component.onCompleted: {
-        var result = ScanManager.treeResult;
-        if (result && result.length > 0) {
-            // 初始化根节点的状态
-            for (var i = 0; i < result.length; i++) {
-                // 不再设置 expanded 状态，界面自行控制
-                result[i].childrenLoaded = false;
-                result[i].selected = false;
-                // 默认设置目录都有子节点，实际加载时再更新
-                result[i].hasChildren = result[i].isDir;
-            }
-            cleanPage.treeData = result;
-            console.log("CleanPage initialized with", result.length, "root nodes");
+        if (ScanManager && ScanManager.treeModel) {
+            console.log("CleanPage initialized with tree model");
+            updateSelectionStats();
         }
-    }
-
-    // 观察 treeData 变化
-    onTreeDataChanged: {
-        // 移除详细日志
     }
 
     // 临时按钮 - 测试树形数据
@@ -209,12 +141,12 @@ Item {
         anchors.margins: 10 * scaleFactor
         text: qsTr("刷新树形数据")
         onClicked: {
-            console.log("Manual refresh, current tree data:", ScanManager.treeResult.length);
-            cleanPage.treeData = ScanManager.treeResult;
+            console.log("Manual refresh");
+            updateSelectionStats();
         }
     }
 
-    // 树形文件视图 - 不使用阴影效果，改为使用多层矩形模拟
+    // 树形文件视图 - 使用真正的 TreeView
     Item {
         id: treeViewContainer
         width: parent.width * 0.8
@@ -237,10 +169,10 @@ Item {
         }
 
         Rectangle {
-            id: treeView
+            id: treeViewBackground
             anchors.fill: parent
-            color: "#f5f5f5"  // 使用更亮的背景色
-            radius: 8         // 圆角矩形
+            color: "#f5f5f5"
+            radius: 8
             border.color: "#dddddd"
             border.width: 1
             z: 1
@@ -248,67 +180,191 @@ Item {
             // 显示树状结构为空时的提示
             Text {
                 anchors.centerIn: parent
-                visible: cleanPage.treeData.length === 0
+                visible: !ScanManager || !ScanManager.treeModel || ScanManager.treeModel.rowCount() === 0
                 text: qsTr("暂无扫描结果，请先执行扫描操作")
                 font.pixelSize: 14 * cleanPage.scaleFactor
                 color: "#666666"
             }
 
-            // 使用 ScrollView 包裹，支持滚动
-            ScrollView {
-                id: treeScrollView
+            Column {
                 anchors.fill: parent
                 anchors.margins: 5 * scaleFactor
-                clip: true
 
-                ListView {
-                    id: treeListView
-                    anchors.fill: parent
-                    anchors.margins: 5 * scaleFactor
-                    spacing: 4 * scaleFactor
+                // 头部信息
+                Item {
+                    width: parent.width
+                    height: headerText.height + 10 * scaleFactor
 
-                    header: Item {
-                        width: treeListView.width
-                        height: headerText.height + 10 * scaleFactor
-
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "#e8e8e8"
-                            radius: 4
-                        }
-
-                        Text {
-                            id: headerText
-                            anchors.centerIn: parent
-                            text: qsTr("已选择 %1 个文件，共 %2 MB").arg(cleanPage.selectedCount)
-                                .arg((cleanPage.selectedSize / (1024 * 1024)).toFixed(2))
-                            font.pixelSize: 14 * cleanPage.scaleFactor
-                            color: "#333333"
-                            font.bold: true
-                        }
+                    Rectangle {
+                        anchors.fill: parent
+                        color: "#e8e8e8"
+                        radius: 4
                     }
 
-                    model: cleanPage.treeData
-                    delegate: FileTreeItem {
-                        width: treeListView.width
-                        node: modelData
-                        scaleFactor: cleanPage.scaleFactor
-                        debug: true
+                    Text {
+                        id: headerText
+                        anchors.centerIn: parent
+                        text: qsTr("已选择 %1 个文件，共 %2 MB").arg(cleanPage.selectedCount)
+                            .arg((cleanPage.selectedSize / (1024 * 1024)).toFixed(2))
+                        font.pixelSize: 14 * cleanPage.scaleFactor
+                        color: "#333333"
+                        font.bold: true
+                    }
+                }
 
-                        // 修改为使用函数处理信号
-                        function handleExpanded(expandedNode) {
-                            cleanPage.loadChildrenFor(expandedNode);
+                // 使用真正的 TreeView
+                TreeView {
+                    id: treeView
+                    width: parent.width
+                    height: parent.height - headerText.height - 10 * scaleFactor
+                    clip: true
+                    model: ScanManager ? ScanManager.treeModel : null
+
+                    // 选择模型
+                    selectionModel: ItemSelectionModel {
+                        model: treeView.model
+                    }
+
+                    // 自定义委托
+                    delegate: Item {
+                        implicitWidth: treeView.width
+                        implicitHeight: 32 * cleanPage.scaleFactor
+
+                        readonly property real indentation: 20 * cleanPage.scaleFactor
+                        readonly property real padding: 5 * cleanPage.scaleFactor
+
+                        // TreeView 提供的必需属性
+                        required property TreeView treeView
+                        required property bool isTreeNode
+                        required property bool expanded
+                        required property bool hasChildren
+                        required property int depth
+                        required property int row
+                        required property int column
+                        required property bool current
+
+                        // 获取模型数据
+                        readonly property string itemName: model.name || ""
+                        readonly property string itemPath: model.path || ""
+                        readonly property bool itemIsDir: model.isDir || false
+                        readonly property real itemSize: model.size || 0
+                        readonly property bool itemSelected: model.selected || false
+
+                        // 获取当前项的模型索引
+                        readonly property var modelIndex: treeView.index(row, column)
+
+                        // 背景
+                        Rectangle {
+                            anchors.fill: parent
+                            color: current ? "#0085F8" : (row % 2 === 0 ? "#f0f0f0" : "#e8e8e8")
+                            radius: 4
+                            opacity: 0.8
                         }
 
-                        function handleSelected(selectedNode, checked) {
-                            cleanPage.setNodeSelection(selectedNode, checked);
+                        Row {
+                            spacing: 8 * cleanPage.scaleFactor
+                            width: parent.width
+                            height: parent.height
+                            leftPadding: padding + (isTreeNode ? depth * indentation : 0)
 
-                            // 强制更新视图以确保UI同步
-                            cleanPage.forceTreeViewUpdate();
+                            // 复选框
+                            CheckBox {
+                                width: 20 * cleanPage.scaleFactor
+                                height: 20 * cleanPage.scaleFactor
+                                anchors.verticalCenter: parent.verticalCenter
+                                checked: itemSelected
+
+                                onCheckedChanged: {
+                                    if (checked !== itemSelected && modelIndex && ScanManager && ScanManager.treeModel) {
+                                        console.log("CheckBox: Setting '" + itemName + "' to " + checked);
+
+                                        // 设置当前节点选中状态
+                                        var success = ScanManager.treeModel.setData(modelIndex, checked, 261); // SelectedRole = 261
+                                        if (!success) {
+                                            console.log("CheckBox: Failed to set selection for '" + itemName + "'");
+                                            return;
+                                        }
+
+                                        // 递归设置子节点选中状态（不重复设置当前节点）
+                                        var rowCount = ScanManager.treeModel.rowCount(modelIndex);
+                                        for (var i = 0; i < rowCount; i++) {
+                                            var childIndex = ScanManager.treeModel.index(i, 0, modelIndex);
+                                            if (childIndex && childIndex.valid) {
+                                                cleanPage.setNodeSelection(childIndex, checked);
+                                            }
+                                        }
+
+                                        // 更新统计信息
+                                        cleanPage.updateSelectionStats();
+                                    }
+                                }
+                            }
+
+                            // 展开/收起图标
+                            Item {
+                                width: 20 * cleanPage.scaleFactor
+                                height: 20 * cleanPage.scaleFactor
+                                visible: isTreeNode && hasChildren
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: expanded ? "▼" : "▶"
+                                    color: "#333333"
+                                    font.pixelSize: 12 * cleanPage.scaleFactor
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        if (hasChildren && modelIndex) {
+                                            console.log("Toggling expansion for row:", row, "expanded:", expanded);
+                                            treeView.selectionModel.setCurrentIndex(modelIndex, ItemSelectionModel.NoUpdate);
+                                            treeView.toggleExpanded(row);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 文件/文件夹图标
+                            Rectangle {
+                                width: 20 * cleanPage.scaleFactor
+                                height: 20 * cleanPage.scaleFactor
+                                radius: width / 2
+                                color: itemIsDir ? "#4285F4" : "#34A853"
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: itemIsDir ? "D" : "F"
+                                    color: "white"
+                                    font.pixelSize: 10 * cleanPage.scaleFactor
+                                    font.bold: true
+                                }
+                            }
+
+                            // 路径名
+                            Text {
+                                text: itemName
+                                width: parent.width - 200 * cleanPage.scaleFactor
+                                elide: Text.ElideMiddle
+                                font.pixelSize: 12 * cleanPage.scaleFactor
+                                color: "#333333"
+                                font.bold: itemIsDir
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // 大小（文件才显示）
+                            Text {
+                                visible: !itemIsDir
+                                text: itemSize > 0 ? (itemSize / 1024).toFixed(1) + " KB" : ""
+                                font.pixelSize: 10 * cleanPage.scaleFactor
+                                width: 80 * cleanPage.scaleFactor
+                                horizontalAlignment: Text.AlignRight
+                                color: "#555555"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
-
-                        onExpanded: handleExpanded(node)
-                        onSelected: handleSelected(node, checked)
                     }
                 }
             }
@@ -390,51 +446,5 @@ Item {
         onClicked: {
             // TODO: 实现清理逻辑
         }
-    }
-
-    // 深度复制树节点并保持选中状态
-    function deepCopyNodeWithSelection(node) {
-        if (!node) return null;
-
-        var newNode = {};
-        // 复制所有基本属性
-        newNode.path = node.path;
-        newNode.name = node.name;
-        newNode.size = node.size;
-        newNode.isDir = node.isDir;
-        // 不再复制 expanded 状态，界面自行控制
-        newNode.childrenLoaded = node.childrenLoaded;
-        newNode.hasChildren = node.hasChildren;
-
-        // 从 selectedNodes 中获取正确的选中状态
-        newNode.selected = selectedNodes.hasOwnProperty(node.path);
-
-        // 递归复制子节点
-        if (node.children && node.children.length > 0) {
-            newNode.children = [];
-            for (var i = 0; i < node.children.length; i++) {
-                newNode.children.push(deepCopyNodeWithSelection(node.children[i]));
-            }
-        }
-
-        return newNode;
-    }
-
-    // 强制更新树形视图
-    function forceTreeViewUpdate() {
-        // 深度复制树数据并保持选中状态
-        var newTreeData = [];
-        for (var i = 0; i < treeData.length; i++) {
-            newTreeData.push(deepCopyNodeWithSelection(treeData[i]));
-        }
-
-        // 使用新的数据替换原有数据
-        treeData = [];
-        treeData = newTreeData;
-
-        // 强制更新选择状态属性
-        selectedNodesChanged();
-        selectedCountChanged();
-        selectedSizeChanged();
     }
 }
