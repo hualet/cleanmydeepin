@@ -12,6 +12,13 @@ Item {
     property int selectedCount: 0
     property real selectedSize: 0
 
+    // 添加清理状态管理
+    property bool isCleaning: false
+    property int cleanedCount: 0
+    property real cleanedSize: 0
+    property int totalFilesToClean: 0
+    property real totalSizeToClean: 0
+
     // 监听 ScanManager 的 treeModel 变化
     Connections {
         target: ScanManager
@@ -130,6 +137,130 @@ Item {
         if (ScanManager && ScanManager.treeModel) {
             console.log("CleanPage initialized with tree model");
             updateSelectionStats();
+        }
+    }
+
+    // 收集需要清理的文件
+    function collectFilesToClean() {
+        var filesToClean = [];
+        var totalSize = 0;
+
+        if (!ScanManager || !ScanManager.treeModel) {
+            return { files: filesToClean, totalSize: totalSize };
+        }
+
+        // 递归收集选中的文件
+        function collectSelected(parentIndex) {
+            var rowCount = ScanManager.treeModel.rowCount(parentIndex);
+            for (var i = 0; i < rowCount; i++) {
+                var index = ScanManager.treeModel.index(i, 0, parentIndex);
+                var selected = ScanManager.treeModel.data(index, 261); // SelectedRole = 261
+                var isDir = ScanManager.treeModel.data(index, 259); // IsDirRole = 259
+                var itemPath = ScanManager.treeModel.data(index, 258); // PathRole = 258
+                var itemSize = ScanManager.treeModel.data(index, 260); // SizeRole = 260
+                var itemName = ScanManager.treeModel.data(index, 257); // NameRole = 257
+
+                if (selected && !isDir && itemPath) {
+                    filesToClean.push({
+                        path: itemPath,
+                        name: itemName,
+                        size: itemSize || 0
+                    });
+                    totalSize += itemSize || 0;
+                }
+
+                // 递归处理子节点
+                collectSelected(index);
+            }
+        }
+
+        collectSelected(ScanManager.treeModel.index(-1, -1)); // 根索引
+        return { files: filesToClean, totalSize: totalSize };
+    }
+
+    // 执行清理操作
+    function performClean() {
+        if (isCleaning) {
+            console.log("Clean operation already in progress");
+            return;
+        }
+
+        console.log("Starting clean operation");
+
+        // 收集需要清理的文件
+        var cleanData = collectFilesToClean();
+        var filesToClean = cleanData.files;
+        totalSizeToClean = cleanData.totalSize;
+        totalFilesToClean = filesToClean.length;
+
+        if (totalFilesToClean === 0) {
+            console.log("No files selected for cleaning");
+            return;
+        }
+
+        console.log("Total files to clean: " + totalFilesToClean + ", Total size: " + (totalSizeToClean / (1024 * 1024)).toFixed(2) + " MB");
+
+        // 开始清理
+        isCleaning = true;
+        cleanedCount = 0;
+        cleanedSize = 0;
+
+        // 模拟逐个删除文件
+        cleanNextFile(filesToClean, 0);
+    }
+
+    // 递归清理文件（模拟异步操作）
+    function cleanNextFile(filesToClean, index) {
+        if (index >= filesToClean.length) {
+            // 清理完成
+            finishClean();
+            return;
+        }
+
+        var file = filesToClean[index];
+
+        // 模拟文件删除延迟
+        cleanTimer.file = file;
+        cleanTimer.filesToClean = filesToClean;
+        cleanTimer.currentIndex = index;
+        cleanTimer.start();
+    }
+
+    // 完成清理操作
+    function finishClean() {
+        console.log("Clean operation completed");
+        console.log("Total cleaned: " + cleanedCount + " files, " + (cleanedSize / (1024 * 1024)).toFixed(2) + " MB");
+
+        isCleaning = false;
+
+        // 重新扫描以更新界面
+        updateSelectionStats();
+
+        // 显示完成提示
+        cleanCompleteDialog.open();
+    }
+
+    // 清理定时器，模拟异步删除
+    Timer {
+        id: cleanTimer
+        interval: 50 // 50ms 延迟模拟删除操作
+        repeat: false
+
+        property var file: null
+        property var filesToClean: []
+        property int currentIndex: 0
+
+        onTriggered: {
+            if (file) {
+                // 模拟删除文件
+                console.log("Deleting file: " + file.path + " (Size: " + (file.size / 1024).toFixed(1) + " KB)");
+
+                cleanedCount++;
+                cleanedSize += file.size;
+
+                // 继续清理下一个文件
+                cleanPage.cleanNextFile(filesToClean, currentIndex + 1);
+            }
         }
     }
 
@@ -408,14 +539,11 @@ Item {
     // 底部清理按钮
     Button {
         id: cleanBtn
-        text: qsTr("清理")
+        text: isCleaning ? qsTr("清理中...") : qsTr("清理")
         width: 120 * scaleFactor
         height: 40 * scaleFactor
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 40 * cleanPage.scaleFactor
+        enabled: cleanPage.selectedCount > 0 && !isCleaning
         ToolTip.text: qsTr("清理选中的文件")
-        enabled: cleanPage.selectedCount > 0
 
         background: Rectangle {
             radius: 4
@@ -431,7 +559,100 @@ Item {
             verticalAlignment: Text.AlignVCenter
         }
         onClicked: {
-            // TODO: 实现清理逻辑
+            performClean();
+        }
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: progressContainer.visible ? progressContainer.top : parent.bottom
+        anchors.bottomMargin: progressContainer.visible ? 20 * cleanPage.scaleFactor : 40 * cleanPage.scaleFactor
+    }
+
+    // 清理进度显示
+    Item {
+        id: progressContainer
+        width: parent.width * 0.6
+        height: 80 * cleanPage.scaleFactor
+        visible: isCleaning
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 40 * cleanPage.scaleFactor
+
+        Rectangle {
+            anchors.fill: parent
+            color: "#f0f0f0"
+            radius: 8
+            border.color: "#dddddd"
+            border.width: 1
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 10 * cleanPage.scaleFactor
+
+                Text {
+                    text: qsTr("正在清理文件...")
+                    font.pixelSize: 14 * cleanPage.scaleFactor
+                    color: "#333333"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                ProgressBar {
+                    id: progressBar
+                    width: progressContainer.width * 0.8
+                    height: 8 * cleanPage.scaleFactor
+                    value: totalFilesToClean > 0 ? cleanedCount / totalFilesToClean : 0
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                Text {
+                    text: qsTr("已清理: %1/%2 文件, %3/%4 MB")
+                        .arg(cleanedCount)
+                        .arg(totalFilesToClean)
+                        .arg((cleanedSize / (1024 * 1024)).toFixed(2))
+                        .arg((totalSizeToClean / (1024 * 1024)).toFixed(2))
+                    font.pixelSize: 12 * cleanPage.scaleFactor
+                    color: "#666666"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+            }
+        }
+    }
+
+    // 清理完成对话框
+    Dialog {
+        id: cleanCompleteDialog
+        title: qsTr("清理完成")
+        modal: true
+        anchors.centerIn: parent
+        width: 300 * cleanPage.scaleFactor
+        height: 150 * cleanPage.scaleFactor
+
+        contentItem: Column {
+            spacing: 15 * cleanPage.scaleFactor
+            anchors.centerIn: parent
+
+            Text {
+                text: qsTr("清理操作已完成！")
+                font.pixelSize: 14 * cleanPage.scaleFactor
+                color: "#333333"
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Text {
+                text: qsTr("共清理了 %1 个文件，释放了 %2 MB 空间")
+                    .arg(cleanedCount)
+                    .arg((cleanedSize / (1024 * 1024)).toFixed(2))
+                font.pixelSize: 12 * cleanPage.scaleFactor
+                color: "#666666"
+                anchors.horizontalCenter: parent.horizontalCenter
+                wrapMode: Text.WordWrap
+                width: parent.width * 0.9
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            Button {
+                text: qsTr("确定")
+                anchors.horizontalCenter: parent.horizontalCenter
+                onClicked: cleanCompleteDialog.close()
+            }
         }
     }
 }
