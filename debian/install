@@ -1,0 +1,5 @@
+# 可执行文件已通过CMake安装规则处理
+# 如果有其他需要安装的文件，可以在这里指定
+# 例如：
+# resources/icons/* usr/share/cleanmydeepin/icons/
+# translations/*.qm usr/share/cleanmydeepin/translations/

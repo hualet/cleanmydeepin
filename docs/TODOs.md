@@ -1,6 +1,6 @@
 -[ ] 界面风格化(dtk)
 -[x] ci/cd
--[ ] deb/linglong
+-[x] deb/linglong (deb已完成)
 -[ ] 单元测试
 -[ ] 翻译
 

@@ -1,0 +1,10 @@
+cleanmydeepin (1.0.0-1) unstable; urgency=medium
+
+  * Initial release
+  * Smart scanning of system temporary files, log files, cache files
+  * Tree-like display of scan results with expand/collapse support
+  * Selective cleaning with individual file selection
+  * Real-time progress display during scanning and cleaning
+  * Safety protection with confirmation mechanism
+
+ -- Deepin Packages Builder <packages@deepin.org>  Mon, 30 Dec 2024 10:00:00 +0800

@@ -1,0 +1,30 @@
+Source: cleanmydeepin
+Section: utils
+Priority: optional
+Maintainer: Hualet Wang <mr.asianwang@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.14),
+               qt6-base-dev,
+               qt6-declarative-dev,
+               qt6-tools-dev,
+               qt6-l10n-tools
+Standards-Version: 4.6.0
+Homepage: https://github.com/hualet/cleanmydeepin
+Vcs-Git: https://github.com/hualet/cleanmydeepin.git
+Vcs-Browser: https://github.com/hualet/cleanmydeepin
+
+Package: cleanmydeepin
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: System cleaning tool for deepin
+ CleanMyDeepin is a system cleaning tool specifically designed for deepin
+ operating system users. It helps users efficiently and conveniently clean
+ useless files in the system (such as cache, log, coredump, etc.), free up
+ disk space, and improve system running efficiency.
+ .
+ Features:
+  * Smart scanning of system temporary files, log files, cache files
+  * Tree-like display of scan results with expand/collapse support
+  * Selective cleaning with individual file selection and select all/deselect all
+  * Real-time progress display during scanning and cleaning
+  * Safety protection with confirmation mechanism to avoid accidental deletion

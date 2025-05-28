@@ -58,6 +58,27 @@ make -j$(nproc)
 ./cleanmydeepin
 ```
 
+### DEB 包构建
+
+项目提供了完整的 Debian 打包支持，可以生成 `.deb` 安装包：
+
+```bash
+# 安装构建依赖
+sudo apt update
+sudo apt install debhelper-compat cmake qt6-base-dev qt6-declarative-dev qt6-tools-dev qt6-l10n-tools build-essential
+
+# 使用构建脚本（推荐）
+./scripts/build-deb.sh
+
+# 或手动构建
+dpkg-buildpackage -us -uc -b
+
+# 安装生成的包
+sudo dpkg -i ../cleanmydeepin_1.0.0-1_amd64.deb
+```
+
+详细的打包说明请参考 [debian/README.md](debian/README.md)。
+
 ### 依赖包安装（以 Debian/Ubuntu 为例）
 
 ```bash

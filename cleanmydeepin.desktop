@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=CleanMyDeepin
+Comment=System cleaning tool for deepin
+Comment[zh_CN]=专为deepin设计的系统清理工具
+Exec=cleanmydeepin
+Icon=cleanmydeepin
+Terminal=false
+Type=Application
+Categories=System;Utility;
+Keywords=clean;system;cache;log;temp;
+Keywords[zh_CN]=清理;系统;缓存;日志;临时文件;
+StartupNotify=true

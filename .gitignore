@@ -57,3 +57,10 @@ compile_commands.json
 
 
 build/
+
+debian/.debhelper/
+debian/cleanmydeepin/
+debian/files
+debian/cleanmydeepin.debhelper.log
+debian/cleanmydeepin.substvars
+obj-x86_64-linux-gnu/
