@@ -3,3 +3,6 @@
 # 例如：
 # resources/icons/* usr/share/cleanmydeepin/icons/
 # translations/*.qm usr/share/cleanmydeepin/translations/
+
+# 将48x48图标安装到hicolor主题中
+resources/icons/48x48/cleanmydeepin.png usr/share/icons/hicolor/48x48/apps/
