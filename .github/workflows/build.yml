@@ -8,14 +8,10 @@ on:
   release:
     types: [ published ]
 
-env:
-  QT_VERSION: 6.8.0
-  CMAKE_VERSION: 3.20.0
-
 jobs:
   build-linux:
     name: Build on Linux
-    runs-on: ubuntu-25.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         arch: [x86_64]
@@ -30,39 +26,12 @@ jobs:
         sudo apt-get install -y \
           build-essential \
           cmake \
-          ninja-build \
           pkg-config \
-          libgl1-mesa-dev \
-          libxkbcommon-dev \
-          libxcb-xkb-dev \
-          libxcb-icccm4-dev \
-          libxcb-image0-dev \
-          libxcb-keysyms1-dev \
-          libxcb-randr0-dev \
-          libxcb-render-util0-dev \
-          libxcb-shape0-dev \
-          libxcb-sync-dev \
-          libxcb-xfixes0-dev \
-          libxcb-xinerama0-dev \
-          libxcb-dri3-dev \
-          libxcb-cursor-dev \
-          libxcb-dri2-0-dev \
-          libxcb-dri3-dev \
-          libxcb-present-dev \
-          libxcb-composite0-dev \
-          libxcb-ewmh-dev \
-          libxcb-res0-dev \
-          libxcb-util-dev
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: linux
-        target: desktop
-        arch: gcc_64
-        modules: 'qtdeclarative qttools qtlinguist'
-        cache: true
+          qt6-base-dev \
+          qt6-declarative-dev \
+          qt6-tools-dev \
+          qt6-l10n-tools \
+          libxkbcommon-dev
 
     - name: Configure CMake
       run: |

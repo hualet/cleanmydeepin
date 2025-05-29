@@ -34,6 +34,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE src src/core src/log)
 # QML 资源
 qt_add_qml_module(${PROJECT_NAME}
     URI CleanMyDeepin
+    VERSION 1.0
     QML_FILES
         qml/MainWindow.qml
         qml/ScanPage.qml
