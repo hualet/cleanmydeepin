@@ -227,7 +227,8 @@ struct ScanItem {
 const QMap<QString, QString> ScanManager::kScanPaths = {
     {QObject::tr("System Logs"), "/var/log"},
     // {QObject::tr("User Cache"), QString::fromUtf8(qgetenv("HOME")) + "/.cache"},
-    {QObject::tr("Trash"), QString::fromUtf8(qgetenv("HOME")) + "/.local/share/Trash"}
+    {QObject::tr("Trash"), QString::fromUtf8(qgetenv("HOME")) + "/.local/share/Trash"},
+    {QObject::tr("Cache"), QString::fromUtf8(qgetenv("HOME")) + "/.cache/"}
 };
 
 // 构造函数

@@ -20,22 +20,6 @@ ApplicationWindow {
     property real scaleFactor: Screen.pixelDensity / 2.0
 
     Component {
-        id: homePage
-        Item {
-
-            Button {
-                text: qsTr("Scan")
-                anchors.centerIn: parent
-                onClicked: {
-                    console.log("Starting scan")
-                    ScanManager.startScan()
-                    pageStack.push(scanPage)
-                }
-            }
-        }
-    }
-
-    Component {
         id: scanPage
 
         ScanPage {
@@ -63,7 +47,7 @@ ApplicationWindow {
 
     StackView {
         id: pageStack
-        initialItem: homePage
+        initialItem: scanPage
         anchors.fill: parent
     }
 }
